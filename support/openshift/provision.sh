@@ -294,6 +294,28 @@ function create_application() {
 			-p KIE_SERVER_PWD="$KIE_SERVER_PWD" \
 			-p BUSINESS_CENTRAL_MEMORY_LIMIT="2Gi"
 
+
+  # Create KIE-Server directly from image,
+  oc new-app --name=$ARG_DEMO-kieserver \
+    --image-stream=openshift/rhpam70-kieserver-openshift:1.0 \
+    -e DROOLS_SERVER_FILTER_CLASSES=true \
+    -e KIE_ADMIN_PWD=$KIE_ADMIN_PWD \
+    -e KIE_ADMIN_USER=$KIE_ADMIN_USER \
+    -e KIE_MBEANS=true \
+    -e KIE_SERVER_BYPASS_AUTH_USER=false \
+    -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD \
+    -e KIE_SERVER_CONTROLLER_USER=$KIE_ADMIN_USER \
+    -e KIE_SERVER_CONTROLLER_SERVICE="$ARG_DEMO-rhpamcentr" \
+    -e KIE_SERVER_ID="cc-dispute-server" \
+    -e KIE_SERVER_PWD=$KIE_SERVER_PWD \
+    -e KIE_SERVER_USER=$KIE_SERVER_USER \
+    -e MAVEN_REPO_SERVICE="$ARG_DEMO-rhpamcentr" \
+    -e MAVEN_REPO_PATH="/maven2/" \
+    -e MAVEN_REPO_USERNAME=$KIE_ADMIN_USER \
+    -e MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD
+
+  oc expose svc/$ARG_DEMO-kieserver
+
 }
 
 function build_and_deploy() {

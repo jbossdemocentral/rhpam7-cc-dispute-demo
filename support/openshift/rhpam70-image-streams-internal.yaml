@@ -1,0 +1,149 @@
+kind: List
+apiVersion: v1
+metadata:
+  name: rhpam70-image-streams
+  annotations:
+    description: ImageStream definitions for Red Hat Process Automation Manager 7.0
+    openshift.io/provider-display-name: Red Hat, Inc.
+items:
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: rhpam70-businesscentral-openshift
+    annotations:
+      openshift.io/display-name: Red Hat Business Central 7.0
+      openshift.io/provider-display-name: Red Hat, Inc.
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '1.0'
+      annotations:
+        description: Red Hat Process Automation Manager 7.0 - Business Central image.
+        iconClass: icon-jboss
+        tags: rhpam,xpaas
+        supports: rhpam:7.0,xpaas:1.4
+        version: '1.0'
+      from:
+        kind: DockerImage
+        name: docker-registry.engineering.redhat.com/rhpam-7/rhpam70-businesscentral-openshift:dev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: rhpam70-businesscentral-monitoring-openshift
+    annotations:
+      openshift.io/display-name: Red Hat Business Central Monitoring 7.0
+      openshift.io/provider-display-name: Red Hat, Inc.
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '1.0'
+      annotations:
+        description: Red Hat Process Automation Manager 7.0 - Business Central Monitoring image.
+        iconClass: icon-jboss
+        tags: rhpam,xpaas
+        supports: rhpam:7.0,xpaas:1.4
+        version: '1.0'
+      from:
+        kind: DockerImage
+        name: docker-registry.engineering.redhat.com/rhpam-7/rhpam70-businesscentral-monitoring-openshift:dev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: rhpam70-controller-openshift
+    annotations:
+      openshift.io/display-name: Red Hat Process Automation Manager Standalone Controller 7.0
+      openshift.io/provider-display-name: Red Hat, Inc.
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '1.0'
+      annotations:
+        description: Red Hat Process Automation Manager 7.0 - Standalone Controller image.
+        iconClass: icon-jboss
+        tags: rhpam,xpaas
+        supports: rhpam:7.0,xpaas:1.4
+        version: '1.0'
+      from:
+        kind: DockerImage
+        name: docker-registry.engineering.redhat.com/rhpam-7/rhpam70-controller-openshift:dev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: rhpam70-kieserver-openshift
+    annotations:
+      openshift.io/display-name: Red Hat Process Automation Manager KIE Server 7.0
+      openshift.io/provider-display-name: Red Hat, Inc.
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '1.0'
+      annotations:
+        description: Red Hat Process Automation Manager 7.0 - KIE Server image.
+        iconClass: icon-jboss
+        tags: rhpam,xpaas
+        supports: rhpam:7.0,xpaas:1.4
+        version: '1.0'
+      from:
+        kind: DockerImage
+        name: docker-registry.engineering.redhat.com/rhpam-7/rhpam70-kieserver-openshift:dev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: rhpam70-smartrouter-openshift
+    annotations:
+      openshift.io/display-name: Red Hat Process Automation Manager Smart Router 7.0
+      openshift.io/provider-display-name: Red Hat, Inc.
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '1.0'
+      annotations:
+        description: Red Hat Process Automation Manager 7.0 - Smart Router image.
+        iconClass: icon-jboss
+        tags: rhpam,xpaas
+        supports: rhpam:7.0,xpaas:1.4
+        version: '1.0'
+      from:
+        kind: DockerImage
+        name: docker-registry.engineering.redhat.com/rhpam-7/rhpam70-smartrouter-openshift:dev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: rhpam70-elasticsearch-openshift
+    annotations:
+      openshift.io/display-name: Elastic Search 5.6.5
+      openshift.io/provider-display-name: Red Hat, Inc.
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '1.0'
+      annotations:
+        description: Elastic Search 5.6.5 image.
+        iconClass: icon-jboss
+        tags: elasticsearch,xpaas
+        supports: elasticsearch:5.6.5,xpaas:1.4
+        version: '1.0'
+      from:
+        kind: DockerImage
+        name: docker-registry.engineering.redhat.com/rhpam-7/rhpam70-elasticsearch-openshift:dev
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: mysql
+    annotations:
+      openshift.io/display-name: MySQL
+      openshift.io/provider-display-name: MySQL
+      openshift.io/image.insecureRepository: "true"
+  spec:
+    tags:
+    - name: '5.7'
+      annotations:
+        description: MySQL
+        iconClass: icon-jboss
+        tags: xpaas
+        supports: xpaas:1.4
+        version: '5.7'
+      from:
+        kind: DockerImage
+        name: registry.access.redhat.com/rhscl/mysql-57-rhel7:latest
+

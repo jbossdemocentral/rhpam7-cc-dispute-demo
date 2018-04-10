@@ -157,6 +157,7 @@ PRJ=("rhpam7-cc-dispute-$PRJ_SUFFIX" "RHPAM7 CC Dispute Demo" "Red Hat Process A
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # KIE Parameters
+#KIE_ADMIN_USER=pamAdmin
 KIE_ADMIN_USER=pamAdmin
 KIE_ADMIN_PWD=redhatpam1!
 KIE_SERVER_CONTROLLER_USER=kieserver
@@ -294,10 +295,23 @@ function create_application() {
 			-p KIE_SERVER_PWD="$KIE_SERVER_PWD" \
 			-p BUSINESS_CENTRAL_MEMORY_LIMIT="2Gi"
 
+  # Create SmartRouter from service.
+
+  oc new-app --name=$ARG_DEMO-smartrouter \
+     --image-stream=$IMAGE_STREAM_NAMESPACE/rhpam70-smartrouter-openshift:1.0 \
+     -e KIE_SERVER_ROUTER_ID="cc-dispute-smartrouter" \
+     -e KIE_SERVER_ROUTER_NAME="CC Dispute SmartRouter" \
+     -e KIE_SERVER_CONTROLLER_SERVICE="$ARG_DEMO-rhpamcentr" \
+     -e KIE_SERVER_CONTROLLER_USER=$KIE_ADMIN_USER \
+     -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD
+
+  oc patch dc/rhpam7-cc-dispute-smartrouter -p '{"spec":{"template":{"spec":{"containers":[{"name": "rhpam7-cc-dispute-smartrouter", "env":[{"name": "KIE_SERVER_ROUTER_HOST","valueFrom":{"fieldRef":{"apiVersion": "v1", "fieldPath": "status.podIP"}}}]}]}}}}'
+
+  oc expose svc/$ARG_DEMO-smartrouter
 
   # Create KIE-Server directly from image,
   oc new-app --name=$ARG_DEMO-kieserver \
-    --image-stream=openshift/rhpam70-kieserver-openshift:1.0 \
+    --image-stream=$IMAGE_STREAM_NAMESPACE/rhpam70-kieserver-openshift:1.0 \
     -e DROOLS_SERVER_FILTER_CLASSES=true \
     -e KIE_ADMIN_PWD=$KIE_ADMIN_PWD \
     -e KIE_ADMIN_USER=$KIE_ADMIN_USER \
@@ -306,13 +320,16 @@ function create_application() {
     -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD \
     -e KIE_SERVER_CONTROLLER_USER=$KIE_ADMIN_USER \
     -e KIE_SERVER_CONTROLLER_SERVICE="$ARG_DEMO-rhpamcentr" \
-    -e KIE_SERVER_ID="cc-dispute-server" \
+    -e KIE_SERVER_ID="cc-dispute-kieserver" \
     -e KIE_SERVER_PWD=$KIE_SERVER_PWD \
     -e KIE_SERVER_USER=$KIE_SERVER_USER \
     -e MAVEN_REPO_SERVICE="$ARG_DEMO-rhpamcentr" \
     -e MAVEN_REPO_PATH="/maven2/" \
     -e MAVEN_REPO_USERNAME=$KIE_ADMIN_USER \
-    -e MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD
+    -e MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD \
+    -e KIE_SERVER_ROUTER_SERVICE=$ARG_DEMO-smartrouter
+
+  oc patch dc/rhpam7-cc-dispute-kieserver -p '{"spec":{"template":{"spec":{"containers":[{"name": "rhpam7-cc-dispute-kieserver", "env":[{"name": "KIE_SERVER_HOST","valueFrom":{"fieldRef":{"apiVersion": "v1", "fieldPath": "status.podIP"}}}]}]}}}}'
 
   oc expose svc/$ARG_DEMO-kieserver
 

@@ -248,17 +248,13 @@ function import_imagestreams_and_templates() {
 
   echo_header "Importing Templates"
   oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-authoring.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-businesscentral-monitoring-with-smartrouter.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-businesscentral-monitoring.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-businesscentral.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-elasticsearch.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-full-mysql.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-kieserver-basic-s2i.yaml
   oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-kieserver-externaldb.yaml
-  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-kieserver-https-s2i.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-kieserver-mysql.yaml
   oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-kieserver-postgresql.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-prod-immutable-kieserver.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-prod-immutable-monitor.yaml
+  oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-sit.yaml
   oc create -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/templates/rhpam70-trial-ephemeral.yaml
-
 }
 
 
@@ -268,9 +264,12 @@ function import_secrets_and_service_account() {
   #oc create -f https://raw.githubusercontent.com/jboss-container-images/rhdm-7-openshift-image/rhdm70-dev/kieserver-app-secret.yaml
 
   oc process -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/example-app-secret-template.yaml | oc create -f -
-
+  oc process -f https://raw.githubusercontent.com/jboss-container-images/rhpam-7-openshift-image/rhpam70-dev/example-app-secret-template.yaml -p SECRET_NAME=kieserver-app-secret | oc create -f -
+  
   oc create serviceaccount businesscentral-service-account
+  oc create serviceaccount kieserver-service-account
   oc secrets link --for=mount businesscentral-service-account businesscentral-app-secret
+  oc secrets link --for=mount kieserver-service-account kieserver-app-secret
 
 }
 
@@ -283,7 +282,8 @@ function create_application() {
     IMAGE_STREAM_NAMESPACE=${PRJ[0]}
   fi
 
-  oc new-app --template=rhpam70-businesscentral \
+  #oc new-app --template=rhpam70-businesscentral \
+  oc new-app --template=rhpam70-authoring \
 			-p APPLICATION_NAME="$ARG_DEMO" \
 			-p IMAGE_STREAM_NAMESPACE="$IMAGE_STREAM_NAMESPACE" \
 			-p IMAGE_STREAM_TAG="1.0" \
@@ -295,43 +295,45 @@ function create_application() {
 			-p KIE_SERVER_PWD="$KIE_SERVER_PWD" \
 			-p BUSINESS_CENTRAL_MEMORY_LIMIT="2Gi"
 
-  # Create SmartRouter from service.
 
-  oc new-app --name=$ARG_DEMO-smartrouter \
-     --image-stream=$IMAGE_STREAM_NAMESPACE/rhpam70-smartrouter-openshift:1.0 \
+  #oc new-app $IMAGE_STREAM_NAMESPACE/rhpam70-smartrouter-openshift:1.0 \
+  oc new-app $IMAGE_STREAM_NAMESPACE/rhpam70-smartrouter-openshift:1.0 \
+     --name=$ARG_DEMO-smartrouter \
      -e KIE_SERVER_ROUTER_ID="cc-dispute-smartrouter" \
      -e KIE_SERVER_ROUTER_NAME="CC Dispute SmartRouter" \
      -e KIE_SERVER_CONTROLLER_SERVICE="$ARG_DEMO-rhpamcentr" \
      -e KIE_SERVER_CONTROLLER_USER=$KIE_ADMIN_USER \
-     -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD
+     -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD \
 
   oc patch dc/rhpam7-cc-dispute-smartrouter -p '{"spec":{"template":{"spec":{"containers":[{"name": "rhpam7-cc-dispute-smartrouter", "env":[{"name": "KIE_SERVER_ROUTER_HOST","valueFrom":{"fieldRef":{"apiVersion": "v1", "fieldPath": "status.podIP"}}}]}]}}}}'
 
   oc expose svc/$ARG_DEMO-smartrouter
 
+  oc set env dc/$ARG_DEMO-kieserver KIE_SERVER_ROUTER_SERVICE=$ARG_DEMO-smartrouter
+
   # Create KIE-Server directly from image,
-  oc new-app --name=$ARG_DEMO-kieserver \
-    --image-stream=$IMAGE_STREAM_NAMESPACE/rhpam70-kieserver-openshift:1.0 \
-    -e DROOLS_SERVER_FILTER_CLASSES=true \
-    -e KIE_ADMIN_PWD=$KIE_ADMIN_PWD \
-    -e KIE_ADMIN_USER=$KIE_ADMIN_USER \
-    -e KIE_MBEANS=true \
-    -e KIE_SERVER_BYPASS_AUTH_USER=false \
-    -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD \
-    -e KIE_SERVER_CONTROLLER_USER=$KIE_ADMIN_USER \
-    -e KIE_SERVER_CONTROLLER_SERVICE="$ARG_DEMO-rhpamcentr" \
-    -e KIE_SERVER_ID="cc-dispute-kieserver" \
-    -e KIE_SERVER_PWD=$KIE_SERVER_PWD \
-    -e KIE_SERVER_USER=$KIE_SERVER_USER \
-    -e MAVEN_REPO_SERVICE="$ARG_DEMO-rhpamcentr" \
-    -e MAVEN_REPO_PATH="/maven2/" \
-    -e MAVEN_REPO_USERNAME=$KIE_ADMIN_USER \
-    -e MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD \
-    -e KIE_SERVER_ROUTER_SERVICE=$ARG_DEMO-smartrouter
+  #oc new-app --name=$ARG_DEMO-kieserver \
+#    --image-stream=$IMAGE_STREAM_NAMESPACE/rhpam70-kieserver-openshift:1.0 \
+  #  -e DROOLS_SERVER_FILTER_CLASSES=true \
+  #  -e KIE_ADMIN_PWD=$KIE_ADMIN_PWD \
+  #  -e KIE_ADMIN_USER=$KIE_ADMIN_USER \
+  #  -e KIE_MBEANS=true \
+  #  -e KIE_SERVER_BYPASS_AUTH_USER=false \
+  #  -e KIE_SERVER_CONTROLLER_PWD=$KIE_ADMIN_PWD \
+  #  -e KIE_SERVER_CONTROLLER_USER=$KIE_ADMIN_USER \
+  #  -e KIE_SERVER_CONTROLLER_SERVICE="$ARG_DEMO-rhpamcentr" \
+  #  -e KIE_SERVER_ID="cc-dispute-kieserver" \
+  #  -e KIE_SERVER_PWD=$KIE_SERVER_PWD \
+  #  -e KIE_SERVER_USER=$KIE_SERVER_USER \
+  #  -e MAVEN_REPO_SERVICE="$ARG_DEMO-rhpamcentr" \
+  #  -e MAVEN_REPO_PATH="/maven2/" \
+  #  -e MAVEN_REPO_USERNAME=$KIE_ADMIN_USER \
+  #  -e MAVEN_REPO_PASSWORD=$KIE_ADMIN_PWD \
+  #  -e KIE_SERVER_ROUTER_SERVICE=$ARG_DEMO-smartrouter
 
-  oc patch dc/rhpam7-cc-dispute-kieserver -p '{"spec":{"template":{"spec":{"containers":[{"name": "rhpam7-cc-dispute-kieserver", "env":[{"name": "KIE_SERVER_HOST","valueFrom":{"fieldRef":{"apiVersion": "v1", "fieldPath": "status.podIP"}}}]}]}}}}'
+  #oc patch dc/rhpam7-cc-dispute-kieserver -p '{"spec":{"template":{"spec":{"containers":[{"name": "rhpam7-cc-dispute-kieserver", "env":[{"name": "KIE_SERVER_HOST","valueFrom":{"fieldRef":{"apiVersion": "v1", "fieldPath": "status.podIP"}}}]}]}}}}'
 
-  oc expose svc/$ARG_DEMO-kieserver
+  #oc expose svc/$ARG_DEMO-kieserver
 
 }
 

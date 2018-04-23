@@ -34,5 +34,5 @@ else if [ ! $PRJ_EXISTS -eq 1 ]; then
 fi
 
 echo_header "Provisioning Red Hat Process Automation Manager 7 Credit Card Dispute demo."
-./support/openshift/provision.sh setup $PRJ_DEMO
+./support/openshift/provision.sh setup $PRJ_DEMO --with-imagestreams
 echo_header "Setup completed."
